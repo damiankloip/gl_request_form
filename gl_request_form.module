@@ -106,11 +106,13 @@ function gl_request_form($form, &$form_state, $node) {
     $values[] = array();
   }
 
+  $options = gl_request_form_get_form_options($node);
+
   foreach (array_keys($values) as $key) {
     $form['product'][$key] = array(
       'product' => array(
         '#type' => 'select',
-        '#options' => array('one', 'two'),
+        '#options' => $options,
         '#default_value' => isset($values[$key]['product']) ? $values[$key]['product'] : NULL,
       ),
       'quantity' => array(
@@ -178,4 +180,19 @@ function gl_request_form_remove_one($form, &$form_state) {
     $form_state['rebuild'] = TRUE;
     unset($form_state['values']['product'][$number]);
   }
+}
+
+/**
+ * Builds an array of available select form options
+ *
+ * @param $node
+ *
+ * @return array
+ */
+function gl_request_form_get_form_options($node) {
+  return array(
+    1 => 'One',
+    2 => 'Two',
+    3 => 'Three',
+  );
 }
