@@ -1,0 +1,181 @@
+<?php
+
+/**
+ * @file
+ * GL request form module.
+ */
+
+function gl_request_form_menu() {
+  $items = array();
+
+  $items['gl'] = array(
+    'title' => 'GL request form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('gl_request_form', menu_get_object()),
+    'access callback' => TRUE,
+    'expanded' => TRUE,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function gl_request_form_block_info() {
+  $blocks['gl_request_form'] = array(
+    'info' => t('GL digital request form'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ * @param  string $delta [description]
+ * @return [type]        [description]
+ */
+function gl_request_form_block_view($delta = '') {
+  // This example is adapted from node.module.
+  $block = array();
+
+  switch ($delta) {
+    case 'gl_request_form':
+      return gl_request_form_block(menu_get_object());
+  }
+
+  return $block;
+}
+
+/**
+ * Returns a block array for use in hook_block_view.
+ *
+ * @return array
+ */
+function gl_request_form_block($node) {
+  if (empty($node)) {
+    return NULL;
+  }
+
+  return array(
+    'subject' => t('Request'),
+    'content' => drupal_get_form('gl_request_form', $node),
+  );
+}
+
+/**
+ * [gl_request_form description]
+ * @return [type] [description]
+ */
+function gl_request_form($form, &$form_state, $node) {
+  if (empty($form_state['product_count'])) {
+    $form_state['product_count'] = 1;
+  }
+
+  $form['#tree'] = TRUE;
+
+  $form['#node'] = array(
+    '#type' => 'value',
+    '#value' => $node,
+  );
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Name'),
+    '#placeholder' => t('Name'),
+  );
+
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+    '#placeholder' => t('Email'),
+  );
+
+  $form['product'] = array(
+    '#type' => 'container',
+    '#prefix' => '<div id="gl-request-form-product-wrapper">',
+    '#suffix' => '</div>',
+  );
+
+  $values = !empty($form_state['values']['product']) ? $form_state['values']['product'] : array(1 => array());
+
+  // Add an additional item if the add item count has gone up.
+  if (count($values) < $form_state['product_count']) {
+    //$last = reset(array_keys(array_slice($values, -1, 1, TRUE)));
+    $values[] = array();
+  }
+
+  foreach (array_keys($values) as $key) {
+    $form['product'][$key] = array(
+      'product' => array(
+        '#type' => 'select',
+        '#options' => array('one', 'two'),
+        '#default_value' => isset($values[$key]['product']) ? $values[$key]['product'] : NULL,
+      ),
+      'quantity' => array(
+        '#type' => 'textfield',
+        '#size' => 6,
+        '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
+      ),
+    );
+    if (($form_state['product_count'] > 1) || (count($values) > 1)) {
+      $form['product'][$key]['remove-' . $key] = array(
+        '#type' => 'submit',
+        '#value' => t('remove'),
+        '#id' => 'gl-request-form-remove-' . $key,
+        '#name' => 'op_' . $key,
+        '#submit' => array('gl_request_form_remove_one'),
+        '#ajax' => array(
+          'callback' => 'gl_request_form_ajax_callback',
+          'wrapper' => 'gl-request-form-product-wrapper',
+        ),
+        '#number' => $key,
+      );
+    }
+  }
+
+  $form['add_another'] = array(
+    '#type' => 'submit',
+    '#value' => t('add another'),
+    '#submit' => array('gl_request_form_add_one'),
+    '#ajax' => array(
+      'callback' => 'gl_request_form_ajax_callback',
+      'wrapper' => 'gl-request-form-product-wrapper',
+    ),
+  );
+
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('submit'),
+  );
+
+  return $form;
+}
+
+/**
+ *
+ */
+function gl_request_form_ajax_callback($form, $form_state) {
+  return $form['product'];
+}
+
+/**
+ * Increments the product counter and causes a rebuild.
+ */
+function gl_request_form_add_one($form, &$form_state) {
+  $form_state['product_count']++;
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Decrements the product counter, removes submitted values and causes a rebuild.
+ */
+function gl_request_form_remove_one($form, &$form_state) {
+  if (!empty($form_state['triggering_element']['#number'])) {
+    $number = $form_state['triggering_element']['#number'];
+    $form_state['product_count']--;
+    $form_state['rebuild'] = TRUE;
+    unset($form_state['values']['product'][$number]);
+  }
+}

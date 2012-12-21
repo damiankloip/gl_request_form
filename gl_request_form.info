@@ -1,0 +1,4 @@
+name = GL digital product request form
+description = A form block to email requests for digital products to GL.
+core = 7.x
+package = granada
