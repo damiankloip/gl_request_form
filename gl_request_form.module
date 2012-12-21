@@ -73,8 +73,6 @@ function gl_request_form($form, &$form_state, $node) {
     $form_state['product_count'] = 1;
   }
 
-  $form['#tree'] = TRUE;
-
   $form['#node'] = array(
     '#type' => 'value',
     '#value' => $node,
@@ -92,13 +90,14 @@ function gl_request_form($form, &$form_state, $node) {
     '#placeholder' => t('Email'),
   );
 
-  $form['product'] = array(
+  $form['products'] = array(
     '#type' => 'container',
-    '#prefix' => '<div id="gl-request-form-product-wrapper">',
+    '#prefix' => '<div id="gl-request-form-products-wrapper">',
     '#suffix' => '</div>',
+    '#tree' => TRUE,
   );
 
-  $values = !empty($form_state['values']['product']) ? $form_state['values']['product'] : array(1 => array());
+  $values = !empty($form_state['values']['products']['product']) ? $form_state['values']['products']['product'] : array(1 => array());
 
   // Add an additional item if the add item count has gone up.
   if (count($values) < $form_state['product_count']) {
@@ -108,21 +107,29 @@ function gl_request_form($form, &$form_state, $node) {
 
   $options = gl_request_form_get_form_options($node);
 
+  $form['products']['top'] = array(
+    '#markup' => '<table><tbody>',
+  );
+
   foreach (array_keys($values) as $key) {
-    $form['product'][$key] = array(
+    $form['products']['product'][$key] = array(
       'product' => array(
         '#type' => 'select',
         '#options' => $options,
         '#default_value' => isset($values[$key]['product']) ? $values[$key]['product'] : NULL,
+        '#prefix' => '<tr class="row-' . $key . '"><td>',
+        '#suffix' => '</td>',
       ),
       'quantity' => array(
         '#type' => 'textfield',
         '#size' => 6,
         '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
+        '#prefix' => '<td>',
+        '#suffix' => '</td>',
       ),
     );
     if (($form_state['product_count'] > 1) || (count($values) > 1)) {
-      $form['product'][$key]['remove-' . $key] = array(
+      $form['products']['product'][$key]['remove-' . $key] = array(
         '#type' => 'submit',
         '#value' => t('remove'),
         '#id' => 'gl-request-form-remove-' . $key,
@@ -130,12 +137,18 @@ function gl_request_form($form, &$form_state, $node) {
         '#submit' => array('gl_request_form_remove_one'),
         '#ajax' => array(
           'callback' => 'gl_request_form_ajax_callback',
-          'wrapper' => 'gl-request-form-product-wrapper',
+          'wrapper' => 'gl-request-form-products-wrapper',
         ),
         '#number' => $key,
+        '#prefix' => '<td>',
+        '#suffix' => '</td></tr>',
       );
     }
   }
+
+  $form['products']['bottom'] = array(
+    '#markup' => '</tbody></table>',
+  );
 
   $form['add_another'] = array(
     '#type' => 'submit',
@@ -143,8 +156,10 @@ function gl_request_form($form, &$form_state, $node) {
     '#submit' => array('gl_request_form_add_one'),
     '#ajax' => array(
       'callback' => 'gl_request_form_ajax_callback',
-      'wrapper' => 'gl-request-form-product-wrapper',
+      'wrapper' => 'gl-request-form-products-wrapper',
     ),
+    '#prefix' => '<div id="gl-request-form-add">',
+    '#suffix' => '</div>',
   );
 
   $form['buttons']['submit'] = array(
@@ -159,7 +174,7 @@ function gl_request_form($form, &$form_state, $node) {
  *
  */
 function gl_request_form_ajax_callback($form, $form_state) {
-  return $form['product'];
+  return $form['products'];
 }
 
 /**
@@ -178,7 +193,7 @@ function gl_request_form_remove_one($form, &$form_state) {
     $number = $form_state['triggering_element']['#number'];
     $form_state['product_count']--;
     $form_state['rebuild'] = TRUE;
-    unset($form_state['values']['product'][$number]);
+    unset($form_state['values']['products']['product'][$number]);
   }
 }
 
