@@ -87,6 +87,7 @@ function gl_request_form($form, &$form_state, $node) {
   $form['email'] = array(
     '#type' => 'textfield',
     '#title' => t('Email'),
+    '#element_validate' => array('gl_request_form_email_element_validate'),
     '#placeholder' => t('Email'),
   );
 
@@ -122,7 +123,7 @@ function gl_request_form($form, &$form_state, $node) {
       ),
       'quantity' => array(
         '#type' => 'textfield',
-        '#size' => 6,
+        //'#element_validate' => array('gl_request_form_quantity_element_validate'),
         '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
         '#prefix' => '<td>',
         '#suffix' => '</td>',
@@ -198,7 +199,27 @@ function gl_request_form_remove_one($form, &$form_state) {
 }
 
 /**
- * Builds an array of available select form options
+ * [gl_request_form_email_element_validate description]
+ */
+function gl_request_form_email_element_validate($element, &$form_state, $form) {
+  if (empty($form_state['triggering_element']['#ajax']) && !preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}$/i', $element['#value'])) {
+    form_error($element, t('Please eneter a valid email address.'));
+  }
+}
+
+/**
+ * [gl_request_form_quantity_element_validate description]
+ */
+function gl_request_form_quantity_element_validate($element, &$form_state, $form) {
+  if ((int) $element['#value'] != $element['#value']) {
+    form_error($element, t('Please enter a valid quantity.'));
+  }
+}
+
+/**
+ * Builds an array of available select form options.
+ *
+ * @todo Replace this will (probably) an EFQ to get what we need.
  *
  * @param $node
  *
