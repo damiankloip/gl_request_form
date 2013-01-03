@@ -16,7 +16,26 @@ function gl_request_form_menu() {
     'expanded' => TRUE,
   );
 
+  $items['admin/gl'] = array(
+    'title' => 'GL request form settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('gl_request_form_admin_form'),
+    'access arguments' => array('administer gl request form'),
+    'file' => 'gl_request_form.admin.inc',
+  );
+
   return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function gl_request_form_permission() {
+  return array(
+    'administer gl request form' => array(
+      'title' => t('Administer GL request form settings'),
+    ),
+  );
 }
 
 /**
@@ -82,12 +101,13 @@ function gl_request_form($form, &$form_state, $node) {
     '#type' => 'textfield',
     '#title' => t('Name'),
     '#placeholder' => t('Name'),
+    '#element_validate' => array('gl_request_form_name_element_validate'),
   );
 
-  $form['email'] = array(
+  $form['mail'] = array(
     '#type' => 'textfield',
     '#title' => t('Email'),
-    '#element_validate' => array('gl_request_form_email_element_validate'),
+    '#element_validate' => array('gl_request_form_mail_element_validate'),
     '#placeholder' => t('Email'),
   );
 
@@ -98,6 +118,8 @@ function gl_request_form($form, &$form_state, $node) {
     '#tree' => TRUE,
   );
 
+  // Get the array of product values that have been input, or create a mock
+  // default starting at key 1 for the sake of the logic below.
   $values = !empty($form_state['values']['products']['product']) ? $form_state['values']['products']['product'] : array(1 => array());
 
   // Add an additional item if the add item count has gone up.
@@ -123,7 +145,7 @@ function gl_request_form($form, &$form_state, $node) {
       ),
       'quantity' => array(
         '#type' => 'textfield',
-        //'#element_validate' => array('gl_request_form_quantity_element_validate'),
+        '#element_validate' => array('gl_request_form_quantity_element_validate'),
         '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
         '#prefix' => '<td>',
         '#suffix' => '</td>',
@@ -172,6 +194,20 @@ function gl_request_form($form, &$form_state, $node) {
 }
 
 /**
+ * Validation handler for gl_request_form.
+ */
+function gl_request_form_validate($form, &$form_state) {
+}
+
+/**
+ * Submit handler for gl_request_form.
+ */
+function gl_request_form_submit($form, &$form_state) {
+  form_state_values_clean($form_state);
+  gl_request_form_send_mail($form_state['values']);
+}
+
+/**
  *
  */
 function gl_request_form_ajax_callback($form, $form_state) {
@@ -199,11 +235,26 @@ function gl_request_form_remove_one($form, &$form_state) {
 }
 
 /**
- * [gl_request_form_email_element_validate description]
+ * Element validation callback for name field.
+ *
+ * Using this so we can deal with the element being required and the ajax
+ * reloading of the form.
  */
-function gl_request_form_email_element_validate($element, &$form_state, $form) {
+function gl_request_form_name_element_validate($element, &$form_state, $form) {
+  if (empty($form_state['triggering_element']['#ajax']) && empty($element['#value'])) {
+    form_error($element, t('Please enter your name.'));
+  }
+}
+
+/**
+ * Element validation callback for email field.
+ *
+ * Using this so we can deal with the element being required and the ajax
+ * reloading of the form.
+ */
+function gl_request_form_mail_element_validate($element, &$form_state, $form) {
   if (empty($form_state['triggering_element']['#ajax']) && !preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}$/i', $element['#value'])) {
-    form_error($element, t('Please eneter a valid email address.'));
+    form_error($element, t('Please enter a valid email address.'));
   }
 }
 
@@ -211,9 +262,70 @@ function gl_request_form_email_element_validate($element, &$form_state, $form) {
  * [gl_request_form_quantity_element_validate description]
  */
 function gl_request_form_quantity_element_validate($element, &$form_state, $form) {
-  if ((int) $element['#value'] != $element['#value']) {
-    form_error($element, t('Please enter a valid quantity.'));
+  if (empty($form_state['triggering_element']['#ajax']) && empty($element['#value'])) {
+    form_error($element, t('Please enter a quantity or descirption.'));
   }
+}
+
+/**
+ * Wrapper/helper for sending emails.
+ *
+ * @param array $params
+ */
+function gl_request_form_send_mail(array $params) {
+  $admins = explode(',', variable_get('gl_request_form_admin_mail', ''));
+  $from = gl_request_form_mail_from();
+
+  $params['subject'] = t('Product request submission from @name (@mail)', array('@name' => $params['name'], '@mail' => $params['mail']));
+  $params['body'] = _gl_request_form_prepare_mail_body($params['products']['product']);
+
+  if (!empty($admins)) {
+    foreach ($admins as $admin) {
+      // Email each admin account.
+      drupal_mail('gl_request_form', 'gl_request_form', $admin, language_default(), $params, $from);
+    }
+  }
+
+}
+
+/**
+ * Helper to return the set gl_request_form from address, or the site address if
+ * it doesn't exist.
+ *
+ * @return string
+ */
+function gl_request_form_mail_from() {
+  return variable_get('gl_request_form_mail_from', variable_get('site_mail', ''));
+}
+
+/**
+ * Implements hook_mail().
+ */
+function gl_request_form_mail($key, &$message, $params) {
+  if ($key == 'gl_request_form') {
+    // Modify the message.
+    $message['subject'] = $params['subject'];
+    $message['body'] = $params['body'];
+  }
+}
+
+/**
+ * Prepare the mail body array from the products array.
+ *
+ * @param array $products
+ *
+ * @return array
+ *   An array of prepared markup, by line.
+ */
+function _gl_request_form_prepare_mail_body(array $products) {
+  $body = array();
+
+  foreach ($products as $product) {
+    // @todo Improve this markup.
+    $body[] = '<p>' . check_plain($product['product']) . ' : ' . check_plain($product['quantity']) . '</p>';
+  }
+
+  return $body;
 }
 
 /**
