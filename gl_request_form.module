@@ -5,6 +5,9 @@
  * GL request form module.
  */
 
+/**
+ * Implements hook_menu().
+ */
 function gl_request_form_menu() {
   $items = array();
 
@@ -52,8 +55,6 @@ function gl_request_form_block_info() {
 
 /**
  * Implements hook_block_view().
- * @param  string $delta [description]
- * @return [type]        [description]
  */
 function gl_request_form_block_view($delta = '') {
   // This example is adapted from node.module.
@@ -84,8 +85,7 @@ function gl_request_form_block($node) {
 }
 
 /**
- * [gl_request_form description]
- * @return [type] [description]
+ * Request form callback.
  */
 function gl_request_form($form, &$form_state, $node) {
   if (empty($form_state['product_count'])) {
@@ -197,6 +197,8 @@ function gl_request_form($form, &$form_state, $node) {
  * Validation handler for gl_request_form.
  */
 function gl_request_form_validate($form, &$form_state) {
+  // At the moment all validation is handled by individual element_validate
+  // callbacks.
 }
 
 /**
@@ -204,7 +206,11 @@ function gl_request_form_validate($form, &$form_state) {
  */
 function gl_request_form_submit($form, &$form_state) {
   form_state_values_clean($form_state);
-  gl_request_form_send_mail($form_state['values']);
+
+  // Send off the emails. If this is successful, set a message.
+  if (gl_request_form_send_mail($form_state['values'])) {
+    drupal_set_message(t('Thanks you. Your request has been sent.'));
+  }
 }
 
 /**
@@ -271,6 +277,9 @@ function gl_request_form_quantity_element_validate($element, &$form_state, $form
  * Wrapper/helper for sending emails.
  *
  * @param array $params
+ *
+ * @return bool
+ *   Returns TRUE if atleast 1 email was sent correctly, FALSE otherwise.
  */
 function gl_request_form_send_mail(array $params) {
   $admins = explode(',', variable_get('gl_request_form_admin_mail', ''));
@@ -279,13 +288,26 @@ function gl_request_form_send_mail(array $params) {
   $params['subject'] = t('Product request submission from @name (@mail)', array('@name' => $params['name'], '@mail' => $params['mail']));
   $params['body'] = _gl_request_form_prepare_mail_body($params['products']['product']);
 
+  // We are expecting $sent to come out TRUE, even if some fail for some reason
+  // we will show the success message if it shows success for atleast 1 recipient.
+  $sent = FALSE;
+
   if (!empty($admins)) {
     foreach ($admins as $admin) {
       // Email each admin account.
-      drupal_mail('gl_request_form', 'gl_request_form', $admin, language_default(), $params, $from);
+      $mail = drupal_mail('gl_request_form', 'gl_request_form', $admin, language_default(), $params, $from);
+
+      if ($mail['result']) {
+        $sent = TRUE;
+        watchdog('gl_request_form', 'Email sent to @mail', array('@mail' => $mail['params']['mail']), WATCHDOG_INFO);
+      }
+      else {
+        watchdog('gl_request_form', 'Email not sent to @mail', array('@mail' => $mail['params']['mail']), WATCHDOG_ERROR);
+      }
     }
   }
 
+  return $sent;
 }
 
 /**
@@ -320,10 +342,17 @@ function gl_request_form_mail($key, &$message, $params) {
 function _gl_request_form_prepare_mail_body(array $products) {
   $body = array();
 
+  $body[] = '<h1>' . t('TITLE') . '</h1>';
+
+  $rows = array();
   foreach ($products as $product) {
-    // @todo Improve this markup.
-    $body[] = '<p>' . check_plain($product['product']) . ' : ' . check_plain($product['quantity']) . '</p>';
+    $rows[] = array(
+      check_plain($product['product']),
+      check_plain($product['quantity']),
+    );
   }
+
+  $body[] = theme('table', array('rows' => $rows, 'header' => array(t('Product'), t('Quantity'))));
 
   return $body;
 }
@@ -343,4 +372,8 @@ function gl_request_form_get_form_options($node) {
     2 => 'Two',
     3 => 'Three',
   );
+
+  $query = new EntityFieldQuery();
+  $query->addEntityCondition('entity_type', 'TYPE');
+  $query->addPropertyCondition('', '');
 }
