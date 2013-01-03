@@ -209,7 +209,7 @@ function gl_request_form_submit($form, &$form_state) {
 
   // Send off the emails. If this is successful, set a message.
   if (gl_request_form_send_mail($form_state['values'])) {
-    drupal_set_message(t('Thanks you. Your request has been sent.'));
+    drupal_set_message(t('Thank you. Your request has been sent.'));
   }
 }
 
@@ -286,7 +286,7 @@ function gl_request_form_send_mail(array $params) {
   $from = gl_request_form_mail_from();
 
   $params['subject'] = t('Product request submission from @name (@mail)', array('@name' => $params['name'], '@mail' => $params['mail']));
-  $params['body'] = _gl_request_form_prepare_mail_body($params['products']['product']);
+  $params['body'] = _gl_request_form_prepare_mail_body($params);
 
   // We are expecting $sent to come out TRUE, even if some fail for some reason
   // we will show the success message if it shows success for atleast 1 recipient.
@@ -299,10 +299,10 @@ function gl_request_form_send_mail(array $params) {
 
       if ($mail['result']) {
         $sent = TRUE;
-        watchdog('gl_request_form', 'Email sent to @mail', array('@mail' => $mail['params']['mail']), WATCHDOG_INFO);
+        watchdog('gl_request_form', 'Email sent to @mail', array('@mail' => $admin), WATCHDOG_INFO);
       }
       else {
-        watchdog('gl_request_form', 'Email not sent to @mail', array('@mail' => $mail['params']['mail']), WATCHDOG_ERROR);
+        watchdog('gl_request_form', 'Email not sent to @mail', array('@mail' => $admin), WATCHDOG_ERROR);
       }
     }
   }
@@ -334,18 +334,21 @@ function gl_request_form_mail($key, &$message, $params) {
 /**
  * Prepare the mail body array from the products array.
  *
- * @param array $products
+ * @param array $params
  *
  * @return array
  *   An array of prepared markup, by line.
  */
-function _gl_request_form_prepare_mail_body(array $products) {
+function _gl_request_form_prepare_mail_body(array $params) {
   $body = array();
 
-  $body[] = '<h1>' . t('TITLE') . '</h1>';
+  $body[] = '<h1>' . t('Digital product request.') . '</h1>';
+
+  $body[] = '<p>' . t('Name: @name', array('@name' => $params['name'])) . '</p>';
+  $body[] = '<p>' . t('Email address: @mail', array('@mail' => $params['mail'])) . '</p>';
 
   $rows = array();
-  foreach ($products as $product) {
+  foreach ($params['products']['product'] as $product) {
     $rows[] = array(
       check_plain($product['product']),
       check_plain($product['quantity']),
@@ -368,12 +371,14 @@ function _gl_request_form_prepare_mail_body(array $products) {
  */
 function gl_request_form_get_form_options($node) {
   return array(
-    1 => 'One',
-    2 => 'Two',
-    3 => 'Three',
+    'product_one' => 'Product one',
+    'product_two' => 'Product two',
+    'product_three' => 'Product three',
+    'product_four' => 'Product four',
   );
 
-  $query = new EntityFieldQuery();
-  $query->addEntityCondition('entity_type', 'TYPE');
-  $query->addPropertyCondition('', '');
+  // @todo Replace this static list with an EFQ to populate the select.
+  // $query = new EntityFieldQuery();
+  // $query->addEntityCondition('entity_type', 'TYPE');
+  // $query->addPropertyCondition('', '');
 }
