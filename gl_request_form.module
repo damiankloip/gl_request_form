@@ -128,7 +128,7 @@ function gl_request_form($form, &$form_state, $node) {
     $values[] = array();
   }
 
-  $options = gl_request_form_get_form_options($node);
+  $options = gl_request_form_form_options($node);
 
   $form['products']['top'] = array(
     '#markup' => '<table><tbody>',
@@ -369,41 +369,29 @@ function _gl_request_form_prepare_mail_body(array $params) {
  *
  * @return array
  */
-function gl_request_form_get_form_options($node) {
-  return array(
-    'product_one' => 'Product one',
-    'product_two' => 'Product two',
-    'product_three' => 'Product three',
-    'product_four' => 'Product four',
-  );
-
+function gl_request_form_form_options($node) {
   $options = array();
-
-  // @todo Replace this static list with an EFQ to populate the select.
-  $digital_product_nids = array(916);
 
   $query = new EntityFieldQuery();
   $query->entityCondition('entity_type', 'node');
   $query->entityCondition('bundle', 'selling_line');
   // Check these field names!
-  $query->fieldCondition('field_ref_product', 'nid', $digital_product_nids, 'IN');
+  $query->fieldCondition('field_digital_product', 'value', TRUE);
   $result = $query->execute();
-
-  dpm($result);
 
   if (!empty($result['node'])) {
     $nodes = node_load_multiple(array_keys($result['node']));
 
     foreach ($nodes as $node) {
       $label = check_plain($node->title);
-      if (!empty($node->field_isbn[$node->language][0]['value'])) {
-        $label .= ' (' . $node->field_isbn[$node->language][0]['safe_value'] . ')';
+      if ($items = field_get_items('node', $node, 'field_isbn')) {
+        $first = reset($items);
+        $label .= ' (' . $first['safe_value'] . ')';
       }
 
       $options[$node->nid] = $label;
     }
   }
 
-  dpm($nodes);
   return $options;
 }
