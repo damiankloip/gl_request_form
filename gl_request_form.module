@@ -149,6 +149,7 @@ function gl_request_form($form, &$form_state, $node) {
         '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
         '#prefix' => '<td>',
         '#suffix' => '</td>',
+        '#size' => '5',
       ),
     );
     if (($form_state['product_count'] > 1) || (count($values) > 1)) {
