@@ -186,9 +186,19 @@ function gl_request_form($form, &$form_state, $node) {
     '#suffix' => '</div>',
   );
 
+	$form['product_pricing_guide'] = array(
+		'#markup' => '<span class="ppg">'.l(t('Product / pricing guide'), '#').'</span>',	
+	);
+
+	$form['product_pricing_guide_desc'] = array(
+		'#markup' => '<span class="ppg-desc">'.t('*CAT4 is only available to schools and has certain technical requirements to run.').'</span>',	
+	);
+
   $form['buttons']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('submit'),
+    '#value' => t('Submit'),
+    '#prefix' => '<div class="more">',
+    '#suffix' => '</div>',
   );
 
   return $form;
