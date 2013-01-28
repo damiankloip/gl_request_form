@@ -133,14 +133,16 @@ function gl_request_form($form, &$form_state, $node) {
   $form['products']['top'] = array(
     '#markup' => '<table><tbody>',
   );
-
+  $form['products']['title'] = array(
+    '#markup' => '<div class="product-title"><label for="products">'.t('Select order').'</label></div>',
+  );
   foreach (array_keys($values) as $key) {
     $form['products']['product'][$key] = array(
       'product' => array(
         '#type' => 'select',
         '#options' => $options,
         '#default_value' => isset($values[$key]['product']) ? $values[$key]['product'] : NULL,
-        '#prefix' => '<tr class="row-' . $key . '"><td>',
+        '#prefix' => '<tr class="row-' . $key . '" style="height:40px;"><td style="width:130px;">',
         '#suffix' => '</td>',
       ),
       'quantity' => array(
@@ -149,13 +151,13 @@ function gl_request_form($form, &$form_state, $node) {
         '#default_value' => isset($values[$key]['quantity']) ? $values[$key]['quantity'] : NULL,
         '#prefix' => '<td>',
         '#suffix' => '</td>',
-        '#size' => '5',
+        '#size' => '2',
       ),
     );
     if (($form_state['product_count'] > 1) || (count($values) > 1)) {
       $form['products']['product'][$key]['remove-' . $key] = array(
         '#type' => 'submit',
-        '#value' => t('remove'),
+        '#value' => t('X'),
         '#id' => 'gl-request-form-remove-' . $key,
         '#name' => 'op_' . $key,
         '#submit' => array('gl_request_form_remove_one'),
@@ -167,16 +169,19 @@ function gl_request_form($form, &$form_state, $node) {
         '#prefix' => '<td>',
         '#suffix' => '</td></tr>',
       );
+      $form['products']['product'][$key]['remove-' . $key]['#attributes'] = array(
+      	'class' => array('remove-additional'),
+      );
     }
   }
 
   $form['products']['bottom'] = array(
     '#markup' => '</tbody></table>',
   );
-
+  
   $form['add_another'] = array(
     '#type' => 'submit',
-    '#value' => t('add another'),
+    '#value' => t('Add another'),
     '#submit' => array('gl_request_form_add_one'),
     '#ajax' => array(
       'callback' => 'gl_request_form_ajax_callback',
@@ -185,22 +190,26 @@ function gl_request_form($form, &$form_state, $node) {
     '#prefix' => '<div id="gl-request-form-add">',
     '#suffix' => '</div>',
   );
-
-	$form['product_pricing_guide'] = array(
-		'#markup' => '<span class="ppg">'.l(t('Product / pricing guide'), '#').'</span>',	
+	
+	$form['add_another']['#attributes'] = array(
+		'class' => array('add-another'),
 	);
-
-	$form['product_pricing_guide_desc'] = array(
-		'#markup' => '<span class="ppg-desc">'.t('*CAT4 is only available to schools and has certain technical requirements to run.').'</span>',	
+	
+	$form['product_pricing_guide'] = array(
+		'#markup' => '<span class="ppg">'.l(t('Product / pricing guide'), 'node/2058').'</span>',	
 	);
 
   $form['buttons']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Submit  »'),
     '#prefix' => '<div class="more">',
     '#suffix' => '</div>',
   );
-
+  
+  $form['buttons']['submit']['#attributes'] = array(
+  	'class' => array('buttonlink')
+  );
+  
   return $form;
 }
 
@@ -394,11 +403,11 @@ function gl_request_form_form_options($node) {
     $nodes = node_load_multiple(array_keys($result['node']));
 
     foreach ($nodes as $node) {
-      $label = check_plain($node->title);
-      if ($items = field_get_items('node', $node, 'field_isbn')) {
-        $first = reset($items);
-        $label .= ' (' . $first['safe_value'] . ')';
-      }
+      $label = $node->title;
+      //if ($items = field_get_items('node', $node, 'field_isbn')) {
+        //$first = reset($items);
+        //$label .= ' (' . $first['safe_value'] . ')';
+      //}
 
       $options[$node->nid] = $label;
     }
