@@ -140,7 +140,7 @@ function gl_request_form($form, &$form_state, $node) {
         '#type' => 'select',
         '#options' => $options,
         '#default_value' => isset($values[$key]['product']) ? $values[$key]['product'] : NULL,
-        '#prefix' => '<tr class="row row-' . $key . '">',
+        '#prefix' => '<tr class="row row-' . $key . '"><td>',
         '#suffix' => '</td>',
       ),
       'quantity' => array(
