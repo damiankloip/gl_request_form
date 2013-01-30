@@ -11,16 +11,17 @@
 function gl_request_form_menu() {
   $items = array();
 
+  // Initially just for testing. Disabled for now.
   $items['gl'] = array(
     'title' => 'GL request form',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('gl_request_form', menu_get_object()),
-    'access callback' => TRUE,
+    'access callback' => FALSE,
     'expanded' => TRUE,
   );
 
-  $items['admin/gl'] = array(
-    'title' => 'GL request form settings',
+  $items['admin/config/granada/request-form'] = array(
+    'title' => 'Request form settings',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('gl_request_form_admin_form'),
     'access arguments' => array('administer gl request form'),
