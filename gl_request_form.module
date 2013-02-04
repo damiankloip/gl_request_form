@@ -380,8 +380,6 @@ function _gl_request_form_prepare_mail_body(array $params) {
 /**
  * Builds an array of available select form options.
  *
- * @todo Replace this will (probably) an EFQ to get what we need.
- *
  * @param $node
  *
  * @return array
@@ -392,7 +390,6 @@ function gl_request_form_form_options($node) {
   $query = new EntityFieldQuery();
   $query->entityCondition('entity_type', 'node');
   $query->entityCondition('bundle', 'selling_line');
-  // Check these field names!
   $query->fieldCondition('field_digital_product', 'value', TRUE);
   $result = $query->execute();
 
@@ -400,7 +397,18 @@ function gl_request_form_form_options($node) {
     $nodes = node_load_multiple(array_keys($result['node']));
 
     foreach ($nodes as $node) {
-      $options[$node->nid] = $node->title;
+      $items = field_get_items('node', $node, 'field_price_inc_vat');
+      $price_inc_vat = $items[0]['value'];
+      $items = field_get_items('node', $node, 'field_price_exc_vat');
+      $price_exc_vat = $items[0]['value'];
+
+      $label = $node->title;
+      $label .= ' ' . check_plain($price_inc_vat);
+      // If the prices are the same, add the VAT indicator.
+      if ($price_inc_vat !== $price_exc_vat) {
+        $label .= ' <span class="vat-flag">(+ ' . t("VAT") . ')</span>',
+      }
+      $options[$node->nid] = $label;
     }
   }
 
