@@ -406,7 +406,7 @@ function gl_request_form_form_options($node) {
       $label .= ' ' . check_plain($price_inc_vat);
       // If the prices are the same, add the VAT indicator.
       if ($price_inc_vat !== $price_exc_vat) {
-        $label .= ' <span class="vat-flag">(+ ' . t("VAT") . ')</span>',
+        $label .= ' <span class="vat-flag">(+ ' . t("VAT") . ')</span>';
       }
       $options[$node->nid] = $label;
     }
